@@ -6,14 +6,14 @@ using namespace std;
 /* Look for all **'s and complete them */
 
 //=====================================================
-// File scanner.cpp written by: Group Number: ** 
+// File scanner.cpp written by: Group Number: **4 
 //=====================================================
 
 // --------- Two DFAs ---------------------------------
 
 // WORD DFA 
-// Done by: **
-// RE:   **
+// Done by: ** Ragir Zebari
+// RE:   ** 
 bool word (string s)
 {
 
@@ -42,9 +42,17 @@ bool word (string s)
 }
 
 // PERIOD DFA 
-// Done by: **
-bool period (string s)
-{  // complete this **
+// Done by: ** Ragir Zebari
+bool period (string s) {  // complete this **
+	unsigned int state = 0, charpos = 0;
+	while(s[charpos] != '\0') {
+		if(state == 0 && s[charpos] == '.')
+			state = 1;
+		else
+			break;
+		charpos++;	
+	}
+	return (state == 1) ? true : false;
 }
 
 // ------ Three  Tables -------------------------------------

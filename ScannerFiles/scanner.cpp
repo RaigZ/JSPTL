@@ -12,7 +12,7 @@ using namespace std;
 // --------- Two DFAs ---------------------------------
 
 // WORD DFA 
-// Done by: ** Ragir Zebari
+// Done by: **
 // RE:   ** 
 bool word (string s)
 {
@@ -43,6 +43,9 @@ bool word (string s)
 
 // PERIOD DFA 
 // Done by: ** Ragir Zebari
+
+// q0 is state = 0
+// q1 is state = 1
 bool period (string s) {  // complete this **
 	unsigned int state = 0, charpos = 0;
 	while(s[charpos] != '\0') {

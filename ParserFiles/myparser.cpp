@@ -463,7 +463,8 @@ string filename;
 // The new test driver to start the parser
 // Done by:  **Ragir Zebari
 int main() {
-  cout << "Enter the input file name: ";
+  printf("Group 4: Ragir Zebari, Sydney Corrigan, Joshua Shor\n");
+  cout << "\nEnter the input file name: ";
   cin >> filename;
   fin.open(filename.c_str());
 

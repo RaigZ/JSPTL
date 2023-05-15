@@ -9,3 +9,6 @@ Japanese scanner, parser and translator into Latin alphabet
 
 ## Part B: Parser
 ![LeftFactoring](/docs/PartB/Hint%20on%20Left%20Factoring_w12A-1.jpg)
+
+## Part C: Translator
+![UpdatedRules](/docs/PartC/Hint%20on%20Updating%20Rules.png)

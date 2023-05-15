@@ -324,7 +324,10 @@ void parse_noun();
 void parse_tense();
 void parse_be();
 
-// Grammar: **
+void gen(string line_type);
+void getEword();
+
+// Grammar: ** <story> :: = <s> {<s>}
 // Done by: **Ragir Zebari
 // PARSE STORY
 void parse_story() {
@@ -337,44 +340,66 @@ void parse_story() {
   }
   cout << "\nSuccessfully parsed <story>.\n";
 }
-// PARSE SUBJECT
+// Grammar: **<s> ::= [CONNECTOR #getEword# #gen(CONNECTOR)#] <noun> #getEword# SUBJECT #gen(ACTOR)# <after subject>
+// Done by: **Ragir Zebari
 void parse_s() {
-    if(next_token() == CONNECTOR)
-        match(CONNECTOR);
+    if(next_token() == CONNECTOR) {
+      match(CONNECTOR);
+      getEword();
+      gen("CONNETOR");
+    }
     parse_noun();
     match(SUBJECT);
+    gen("ACTOR");
     parse_afterSubject();
 }
 // PARSE AFTER SUBJECT
+// Grammar: **<after subject> :: = <verb><tense> PERIOD | <noun> <afternoun>
+// Done by: **Ragir Zebari
 void parse_afterSubject() {
   cout << "Processing <afterSubject>\n";
   if(next_token() == WORD2) {
     parse_verb();
+    getEword();
+    gen("ACTION");
     parse_tense();
+    gen("TENSE");
     match(PERIOD);
   }
-  else {
+  else if(next_token() == WORD1 || next_token() == PRONOUN) {
     parse_noun();
+    getEword();
     parse_afterNoun();
   }
+  else
+    syntaxerror2(saved_lexme, "afterSubject");
 }
 // PARSE AFTER NOUN
+// Grammar: **<after noun> :: = <be> PERIOD | DESTINATION  <verb> <tense> PERIOD | OBJECT <after Object>
+//Done by: Ragir Zebari
 void parse_afterNoun() {
   cout << "Processing <afterNoun>\n";
   switch(next_token()) {
     case IS:
     case WAS:
       parse_be();
+      gen("DESCRIPTION");
+      gen("TENSE");
       match(PERIOD);
       break;
     case DESTINATION:
       match(DESTINATION);
+      gen("TO");
       parse_verb();
+      getEword();
+      gen("ACTION");
       parse_tense();
+      gen("TENSE");
       match(PERIOD);
       break;
     case OBJECT:
       match(OBJECT);
+      gen("OBJECT");
       parse_afterObject();
       break;
     default:
@@ -382,20 +407,30 @@ void parse_afterNoun() {
   }
 }
 // PARSE AFTER OBJECT
+// Grammar: **<after object> :: = <verb> <tense> PERIOD | <noun> DESTINATION <verb> <tense> PERIOD
+// Done by: **Ragir Zebari
 void parse_afterObject() {
   cout << "Processing <afterObject>\n";
   switch(next_token()) {
     case WORD2:
       parse_verb();
+      getEword();
+      gen("ACTION");
       parse_tense();
+      gen("TENSE");
       match(PERIOD);
       break;
     case WORD1:
     case PRONOUN:
       parse_noun();
+      getEword();
       match(DESTINATION);
+      gen("TO");
       parse_verb();
+      getEword();
+      gen("ACTION");
       parse_tense();
+      gen("TENSE");
       match(PERIOD);
       break;
     default:
@@ -403,11 +438,19 @@ void parse_afterObject() {
   }
 }
 // PARSE VERB
+// Grammar: **<verb> :: = WORD2
+// Done by: **Ragir Zebari
 void parse_verb() {
   cout << "Processing <verb>\n";
-  match(WORD2);
+  if(next_token() == WORD2) {
+    match(WORD2);
+  }
+  else
+    syntaxerror2(saved_lexme, "verb");
 }
 // PARSE NOUN
+// Grammar: **<noun> :: = WORD1 | PRONOUN
+// Done by: Ragir Zebari
 void parse_noun() {
   cout << "Processing <noun>\n";
   switch(next_token()) {
@@ -422,6 +465,8 @@ void parse_noun() {
   }
 }
 // PARSE TENSE
+// Grammar: **<tense> : = VERBPAST  | VERBPASTNEG | VERB | VERBNEG
+// Done by: Ragir Zebari
 void parse_tense() {
   cout << "Processing <tense>\n";
   switch(next_token()) {
@@ -442,6 +487,8 @@ void parse_tense() {
   }
 }
 // PARSE BE
+// Grammar: **<be> :: = IS | WAS
+// Done by: Ragir Zebari
 void parse_be() {
   cout << "Processing <be>\n";
   switch(next_token()) {
@@ -473,19 +520,39 @@ string filename;
 // ** Declare Lexicon (i.e. dictionary) that will hold the content of lexicon.txt
 // Make sure it is easy and fast to look up the translation.
 // Do not change the format or content of lexicon.txt 
-//  Done by: ** 
+//  Done by: ** Ragir Zebari
+#include <vector>
+#include <fstream>
+ofstream fout;
+
+vector<string> Jword, Eword;
 
 
+// Done by: ** 
 // ** Additions to parser.cpp here:
 //    getEword() - using the current saved_lexeme, look up the English word
 //                 in Lexicon if it is there -- save the result   
 //                 in saved_E_word
-//  Done by: ** 
+string savedEword;
+void getEword() {
+  bool isFound = false;
+  for(int i = 0; i < Jword.size(); i++) {
+    if(Jword[i] == saved_lexme) {
+      savedEword = Eword[i];
+      isFound = true;
+    }
+  }
+  if (!isFound) 
+    savedEword = saved_lexme;
+}
+//  Done by: **
 //    gen(line_type) - using the line type,
 //                     sends a line of an IR to translated.txt
 //                     (saved_E_word or saved_token is used)
-//  Done by: ** 
-
+void gen(string line_type) {
+  (line_type == "TENSE") ? fout << line_type << " " << tokenName[saved_token] << endl 
+  : fout << line_type << ": " << savedEword << endl;
+}
 // ----- Changes to the parser.cpp content ---------------------
 
 // ** Comment update: Be sure to put the corresponding grammar 
@@ -503,19 +570,31 @@ string filename;
 int main()
 {
   //** opens the lexicon.txt file and reads it into Lexicon
+  ifstream lexiconInput;
+  lexiconInput.open("lexicon.txt");
+  
+  string translatedJword, translatedEword;
+  while(lexiconInput) {
+    lexiconInput >> translatedJword >> translatedEword;
+    Jword.push_back(translatedJword);
+    Eword.push_back(translatedEword);
+  }
   //** closes lexicon.txt 
-
+  lexiconInput.close();
   //** opens the output file translated.txt
+  fout.open("translated.txt");
 
+  string filename;
   cout << "Enter the input file name: ";
   cin >> filename;
   fin.open(filename.c_str());
 
   //** calls the <story> to start parsing
-
+  parse_story();
   //** closes the input file 
+  fin.close();
   //** closes traslated.txt
- 
+  fout.close();
 }// end
 //** require no other input files!
 //** syntax error EC requires producing errors.txt of error messages

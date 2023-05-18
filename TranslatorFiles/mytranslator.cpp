@@ -197,8 +197,10 @@ int scanner(tokentype &tt, string &w)
    // ** Grab the next word from the file via fin
    // 1. If it is eofm, return right now.
    fin >> w;
-   if (w == "eofm")
+   if (w == "eofm") {
       tt = EOFM;
+      return 1;
+   }
    else if (word(w))
       tt = WORD;
    else if (period(w))
@@ -282,15 +284,18 @@ void syntaxerror2(string word, string nonterm) {
 
 // ** Need the updated match and next_token with 2 global vars
 // saved_token and saved_lexeme
-string saved_lexme = "";
+string saved_lexme;
 tokentype saved_token;
-
+bool tokenExists;
 // Purpose: **nonterm to return the next token
 // Done by: **Ragir Zebari
 tokentype next_token() {
-    if(saved_lexme == "") {
+    if(!tokenExists) {
         scanner(saved_token, saved_lexme);
         cout << "Scanner called using word: " << saved_lexme << endl;
+        tokenExists = true;
+        if(saved_token == ERROR) 
+          syntaxerror1(saved_lexme, saved_token);
     }
     return saved_token;
 }
@@ -298,14 +303,13 @@ tokentype next_token() {
 // Purpose: **Checks if the token matches, else it is a syntax error where the match fails
 // Done by: **Ragir Zebari
 bool match(tokentype expected) {
-    next_token();
-    bool result = (saved_token == expected);
+    bool result = (next_token() == expected);
     if(result) {
-        cout << "Matched " << tokenName[expected] << endl;
-        saved_lexme = "";
+        //cout << "Matched " << tokenName[expected] << endl;
+        tokenExists = false;
         return true;
     }
-    syntaxerror1(saved_lexme, expected);
+    syntaxerror2(saved_lexme, tokenName[expected]); // no match, error occurs
     return false;
 }
 
@@ -349,6 +353,7 @@ void parse_s() {
       gen("CONNETOR");
     }
     parse_noun();
+    getEword();
     match(SUBJECT);
     gen("ACTOR");
     parse_afterSubject();
@@ -403,7 +408,7 @@ void parse_afterNoun() {
       parse_afterObject();
       break;
     default:
-      syntaxerror2(saved_lexme, "after noun"); // all cases fail, syntax error 2; unexpected
+      syntaxerror2(saved_lexme, "afterNoun"); // all cases fail, syntax error 2; unexpected
   }
 }
 // PARSE AFTER OBJECT
@@ -434,7 +439,7 @@ void parse_afterObject() {
       match(PERIOD);
       break;
     default:
-      syntaxerror2(saved_lexme, "after object"); // all cases fail, syntax error 2; unexpected
+      syntaxerror2(saved_lexme, "afterObject"); // all cases fail, syntax error 2; unexpected
   }
 }
 // PARSE VERB
@@ -442,11 +447,7 @@ void parse_afterObject() {
 // Done by: **Ragir Zebari
 void parse_verb() {
   cout << "Processing <verb>\n";
-  if(next_token() == WORD2) {
-    match(WORD2);
-  }
-  else
-    syntaxerror2(saved_lexme, "verb");
+  match(WORD2);
 }
 // PARSE NOUN
 // Grammar: **<noun> :: = WORD1 | PRONOUN
@@ -521,36 +522,28 @@ string filename;
 // Make sure it is easy and fast to look up the translation.
 // Do not change the format or content of lexicon.txt 
 //  Done by: ** Ragir Zebari
-#include <vector>
+#include <map>
 #include <fstream>
+
 ofstream fout;
+string savedEword;
+map<string, string> w_map;
 
-vector<string> Jword, Eword;
-
-
-// Done by: ** 
+// Done by: ** Ragir Zebari
 // ** Additions to parser.cpp here:
 //    getEword() - using the current saved_lexeme, look up the English word
 //                 in Lexicon if it is there -- save the result   
 //                 in saved_E_word
-string savedEword;
 void getEword() {
-  bool isFound = false;
-  for(int i = 0; i < Jword.size(); i++) {
-    if(Jword[i] == saved_lexme) {
-      savedEword = Eword[i];
-      isFound = true;
-    }
-  }
-  if (!isFound) 
-    savedEword = saved_lexme;
+  map<string, string>::iterator it = w_map.find(saved_lexme);
+  (it != w_map.end()) ? savedEword = it->second : savedEword = saved_lexme;
 }
-//  Done by: **
+//  Done by: ** Ragir Zebari
 //    gen(line_type) - using the line type,
 //                     sends a line of an IR to translated.txt
 //                     (saved_E_word or saved_token is used)
 void gen(string line_type) {
-  (line_type == "TENSE") ? fout << line_type << " " << tokenName[saved_token] << endl 
+  (line_type == "TENSE") ? fout << line_type << ": " << tokenName[saved_token] << endl << endl
   : fout << line_type << ": " << savedEword << endl;
 }
 // ----- Changes to the parser.cpp content ---------------------
@@ -566,21 +559,21 @@ void gen(string line_type) {
 // ---------------- Driver ---------------------------
 
 // The final test driver to start the translator
-// Done by:  **
+// Done by:  ** Ragir Zebari
 int main()
 {
   //** opens the lexicon.txt file and reads it into Lexicon
   ifstream lexiconInput;
   lexiconInput.open("lexicon.txt");
   
-  string translatedJword, translatedEword;
-  while(lexiconInput) {
-    lexiconInput >> translatedJword >> translatedEword;
-    Jword.push_back(translatedJword);
-    Eword.push_back(translatedEword);
+  string Jword, ETranslation;
+  
+  while(lexiconInput >> Jword >> ETranslation) {
+    w_map[Jword] = ETranslation;
   }
   //** closes lexicon.txt 
   lexiconInput.close();
+
   //** opens the output file translated.txt
   fout.open("translated.txt");
 
